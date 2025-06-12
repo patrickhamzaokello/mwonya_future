@@ -317,6 +317,72 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
+### Mwonya App Integration
+
+#### Analytics SDK Setup
+```javascript
+// Install Mwonya Analytics SDK
+npm install mwonya-analytics-sdk
+
+// Initialize in your app
+import { MwonyaAnalytics } from 'mwonya-analytics-sdk';
+
+const analytics = new MwonyaAnalytics({
+  apiKey: process.env.MWONYA_API_KEY,
+  endpoint: 'https://api.mwonya.ug/analytics',
+  batchSize: 50,
+  flushInterval: 30000,
+  enableDebug: process.env.NODE_ENV === 'development'
+});
+
+// Track music interactions
+analytics.trackPlay(trackId, userId, context);
+analytics.trackUserAction('like', { trackId, userId });
+analytics.trackSearch(query, userId, results);
+```
+
+#### React Native Implementation
+```jsx
+// Example React Native component with analytics
+import React, { useEffect } from 'react';
+import { MwonyaPlayer } from './components/MwonyaPlayer';
+import { analytics } from './services/analytics';
+
+const MusicPlayerScreen = ({ track, user }) => {
+  useEffect(() => {
+    analytics.trackPageView('music_player', {
+      trackId: track.id,
+      userId: user.id
+    });
+  }, []);
+
+  const handlePlay = () => {
+    analytics.trackPlay(track.id, user.id, {
+      source: 'player_screen',
+      context: getCurrentContext()
+    });
+  };
+
+  const handleSkip = (position) => {
+    analytics.trackSkip(track.id, user.id, {
+      skipPosition: position,
+      reason: 'user_skip'
+    });
+  };
+
+  return (
+    <MwonyaPlayer
+      track={track}
+      onPlay={handlePlay}
+      onSkip={handleSkip}
+      onProgressUpdate={(position) => 
+        analytics.trackProgress(track.id, user.id, position, track.duration)
+      }
+    />
+  );
+};
+```
+
 ### Configuration
 
 ```yaml
@@ -330,6 +396,7 @@ api_keys:
   spotify: ${SPOTIFY_API_KEY}
   youtube: ${YOUTUBE_API_KEY}
   social_media: ${SOCIAL_MEDIA_API_KEY}
+  mwonya_analytics: ${MWONYA_ANALYTICS_KEY}
 
 cultural_weights:
   language_diversity: 0.3
@@ -341,6 +408,13 @@ processing:
   batch_size: 1000
   update_frequency: "daily"
   cache_duration: 3600
+
+mwonya_integration:
+  analytics_endpoint: "https://api.mwonya.ug/analytics"
+  real_time_events: true
+  batch_processing: true
+  data_retention_days: 90
+  privacy_mode: "strict"
 ```
 
 ### Running the Algorithm
@@ -349,50 +423,131 @@ processing:
 # Initialize the database
 python scripts/init_db.py
 
-# Start data collection
-python scripts/collect_data.py
+# Set up Mwonya analytics integration
+python scripts/setup_mwonya_integration.py
+
+# Start data collection from Mwonya app
+python scripts/collect_mwonya_data.py
+
+# Collect external data sources
+python scripts/collect_external_data.py
 
 # Train the models
 python scripts/train_models.py
 
 # Start the recommendation service
-python main.py
+python main.py --with-mwonya-integration
 ```
 
 ## 📈 Evaluation Metrics
 
-### User Experience Metrics
-- **Discovery Rate**: New artists/tracks discovered per session
-- **Cross-Cultural Engagement**: Percentage of users exploring multiple cultures
-- **Session Duration**: Average time spent on discovery
-- **User Retention**: Monthly active user retention rate
+## 📈 Evaluation Metrics
+
+### User Experience Metrics (Mwonya App KPIs)
+
+#### Core Engagement Metrics
+- **Average Session Duration**: Time users spend actively listening per session
+- **Tracks Per Session**: Number of tracks played in each listening session
+- **Daily/Weekly/Monthly Active Users**: User retention and app stickiness
+- **Track Completion Rate**: Percentage of tracks listened to completion
+- **User Retention Rate**: Percentage of users returning after 1 day, 7 days, 30 days
+
+#### Discovery Effectiveness Metrics
+- **New Artist Discovery Rate**: Number of new artists discovered per user per week
+- **Cross-Language Exploration Rate**: Percentage of users exploring music in different Ugandan languages
+- **Recommendation Click-Through Rate**: Percentage of recommended tracks that users play
+- **Cultural Diversity in Listening**: Spread of music consumption across different Ugandan regions/cultures
+- **User Satisfaction Scores**: Explicit ratings and feedback on recommendations
+
+#### Advanced User Behavior Metrics
+- **Skip Rate Analysis**: Percentage of tracks skipped and at what point
+- **Replay Behavior**: Tracks with high replay rates indicating strong preference
+- **Playlist Creation Activity**: User engagement with creating and sharing playlists
+- **Social Sharing Frequency**: How often users share tracks via social media
+- **Offline Download Patterns**: Which tracks users choose to download for offline listening
 
 ### Cultural Impact Metrics
-- **Artist Diversity Index**: Representation across regions and languages
-- **Cultural Preservation Score**: Traditional music promotion effectiveness
-- **Emerging Artist Success Rate**: New artist discovery and promotion
-- **Community Engagement Level**: User participation in cultural discussions
+
+#### Cultural Preservation and Promotion
+- **Traditional Music Engagement**: Percentage of listening time dedicated to traditional Ugandan music
+- **Local Language Music Consumption**: Distribution of listening across Luganda, Runyankole, Acholi, etc.
+- **Regional Artist Representation**: Equal representation of artists from different Ugandan regions
+- **Emerging Artist Success Rate**: Success rate of algorithm in promoting new/upcoming artists
+- **Cultural Event Music Correlation**: Music consumption patterns during cultural events and holidays
+
+#### Cross-Cultural Bridge Building
+- **Language Boundary Crossing**: Users exploring music in languages they don't typically listen to
+- **Regional Music Exploration**: Users from one region discovering music from other regions
+- **Traditional-Modern Fusion Appreciation**: Engagement with music that blends traditional and modern elements
+- **Community Engagement Level**: User participation in cultural music discussions and sharing
 
 ### Technical Performance Metrics
-- **Recommendation Accuracy**: Click-through rates on recommendations
-- **Response Time**: Average API response time
-- **Model Performance**: Precision, recall, and F1 scores
-- **Data Pipeline Efficiency**: Processing speed and error rates
+
+#### Algorithm Performance
+- **Recommendation Accuracy**: Precision, recall, and F1 scores for recommendations
+- **Personalization Effectiveness**: How well recommendations match individual user preferences
+- **Cold Start Problem Resolution**: Success rate for new users with limited data
+- **Diversity vs. Accuracy Balance**: Maintaining recommendation diversity while keeping accuracy high
+
+#### System Performance
+- **API Response Time**: Average response time for recommendation requests
+- **Data Pipeline Efficiency**: Processing speed and error rates in data ingestion
+- **Real-time Analytics Latency**: Time between user action and data availability
+- **Mobile App Performance**: App responsiveness and crash rates
+
+#### Data Quality Metrics
+- **Data Completeness**: Percentage of tracks with complete metadata
+- **Cultural Annotation Accuracy**: Correctness of cultural and linguistic tagging
+- **User Interaction Data Quality**: Completeness and accuracy of behavioral data
+- **Bias Detection Metrics**: Monitoring for algorithmic bias across different user groups
 
 ## 🧪 Testing
 
+### Unit Tests
 ```bash
-# Run unit tests
+# Run all unit tests
 python -m pytest tests/unit/
 
-# Run integration tests  
-python -m pytest tests/integration/
+# Test specific components
+python -m pytest tests/unit/test_mwonya_analytics.py
+python -m pytest tests/unit/test_recommendation_engine.py
+python -m pytest tests/unit/test_cultural_scoring.py
+```
 
-# Run cultural sensitivity tests
-python -m pytest tests/cultural/
+### Integration Tests
+```bash
+# Test Mwonya app integration
+python -m pytest tests/integration/test_mwonya_integration.py
 
-# Run performance tests
-python -m pytest tests/performance/
+# Test external data sources
+python -m pytest tests/integration/test_data_sources.py
+
+# Test end-to-end recommendation flow
+python -m pytest tests/integration/test_recommendation_flow.py
+```
+
+### Cultural Sensitivity Tests
+```bash
+# Test cultural representation
+python -m pytest tests/cultural/test_language_representation.py
+python -m pytest tests/cultural/test_regional_bias.py
+python -m pytest tests/cultural/test_traditional_music_promotion.py
+```
+
+### Performance Tests
+```bash
+# Test system performance
+python -m pytest tests/performance/test_api_response_times.py
+python -m pytest tests/performance/test_recommendation_latency.py
+python -m pytest tests/performance/test_mwonya_data_processing.py
+```
+
+### Mwonya App Specific Tests
+```bash
+# Test analytics data collection
+python -m pytest tests/mwonya/test_user_interaction_tracking.py
+python -m pytest tests/mwonya/test_real_time_analytics.py
+python -m pytest tests/mwonya/test_privacy_compliance.py
 ```
 
 ## 🚀 Deployment
@@ -485,27 +640,39 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Phase 1: Foundation (Months 1-3)
 - [ ] Basic algorithm implementation
+- [ ] **Mwonya app analytics integration**
+- [ ] **User interaction tracking system**
 - [ ] Core data collection pipeline
 - [ ] Initial NLP models for Luganda and English
 - [ ] Artist and track scoring systems
+- [ ] **Real-time event processing for app data**
 
 ### Phase 2: Enhancement (Months 4-6)
 - [ ] Multi-language support expansion
 - [ ] Advanced cultural context integration
-- [ ] User interface development
-- [ ] Beta testing with select users
+- [ ] **Mwonya app user interface optimization**
+- [ ] **Advanced behavioral analytics**
+- [ ] **Cross-cultural recommendation features**
+- [ ] Beta testing with select Mwonya users
+- [ ] **Privacy and consent management system**
 
 ### Phase 3: Scale (Months 7-9)
 - [ ] Full deployment and monitoring
-- [ ] Advanced analytics and insights
-- [ ] Mobile application development
-- [ ] Partnership expansion
+- [ ] **Mwonya app public release**
+- [ ] Advanced analytics and insights dashboard
+- [ ] **User feedback and rating system**
+- [ ] **Social features and music sharing**
+- [ ] Partnership expansion with local artists
+- [ ] **Community features within Mwonya**
 
 ### Phase 4: Innovation (Months 10-12)
 - [ ] AI-powered cultural insights
 - [ ] Advanced recommendation personalization
+- [ ] **Mwonya app advanced features (offline mode, high-quality audio)**
+- [ ] **User-generated content and playlists**
+- [ ] **Live music event integration**
 - [ ] International expansion preparation
-- [ ] Community-driven features
+- [ ] **Artist monetization features**
 
 ---
 
